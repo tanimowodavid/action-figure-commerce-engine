@@ -1,0 +1,9 @@
+[project]
+name = "action-figure-commerce-engine"
+version = "0.1.0"
+description = "A production-grade, API-first e-commerce engine for action figures, featuring an asynchronous AI-driven recommendation agent, full-text vector search, and a high-concurrency order processing pipeline."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard]>=0.136.3",
+]
