@@ -1,10 +1,10 @@
 erDiagram
-%% USER & IDENTITY
-USER ||--o{ ADDRESS : "has"
-USER ||--o| CART : "owns (Strict 1:1 UK)"
-USER ||--o{ ORDER : "places"
-USER ||--o{ USER_INTERACTION : "generates"
-USER ||--o{ CONVERSATION : "starts"
+    %% USER & IDENTITY
+    USER ||--o{ ADDRESS : "has"
+    USER ||--o| CART : "owns"
+    USER ||--o{ ORDER : "places"
+    USER ||--o{ USER_INTERACTION : "generates"
+    USER ||--o{ CONVERSATION : "starts"
 
     USER {
         int id PK
@@ -54,7 +54,7 @@ USER ||--o{ CONVERSATION : "starts"
         string name
         string slug
         text description
-        vector embedding  %% AI PGVECTOR EXTENSION (e.g. vector(1536))
+        vector embedding "AI PGVECTOR EXTENSION"
         text search_vector_source
         bool is_active
         datetime created_at
@@ -76,7 +76,7 @@ USER ||--o{ CONVERSATION : "starts"
 
     CART {
         int id PK
-        int user_id FK UK
+        int user_id FK "Unique constraint for 1:1 mapping"
         datetime created_at
         datetime updated_at
     }
@@ -138,3 +138,317 @@ USER ||--o{ CONVERSATION : "starts"
         text content
         datetime created_at
     }
+
+
+
+
+erDiagram
+
+    %% =========================
+    %% USER & IDENTITY
+    %% =========================
+
+    USER ||--o{ ADDRESS : has
+    USER ||--o| CART : owns
+    USER ||--o{ ORDER : places
+    USER ||--o{ REVIEW : writes
+    USER ||--o{ PRODUCT_VIEW : views
+    USER ||--o{ USER_INTERACTION : generates
+    USER ||--o{ CHAT_SESSION : starts
+
+    USER {
+        int id PK
+        string email UK
+        string password_hash
+        string first_name
+        string last_name
+        bool is_active
+        bool is_admin
+        datetime created_at
+    }
+
+    ADDRESS {
+        int id PK
+        int user_id FK
+        string label
+        string country
+        string state
+        string city
+        string street
+        string phone_number
+        bool is_default
+    }
+
+
+    %% =========================
+    %% PRODUCT CATALOG
+    %% =========================
+
+    CATEGORY ||--o{ CATEGORY : parent_of
+
+    PRODUCT ||--o{ PRODUCT_CATEGORY : classified_under
+    CATEGORY ||--o{ PRODUCT_CATEGORY : contains
+
+    PRODUCT ||--o{ PRODUCT_VARIANT : has
+    PRODUCT ||--o{ PRODUCT_IMAGE : has
+    PRODUCT ||--o{ REVIEW : receives
+    PRODUCT ||--o{ PRODUCT_VIEW : receives
+    PRODUCT ||--o{ USER_INTERACTION : receives
+
+    PRODUCT {
+        int id PK
+        string name
+        string slug UK
+        text description
+        vector embedding
+        tsvector search_vector
+        bool is_active
+        datetime created_at
+        datetime updated_at
+    }
+
+    CATEGORY {
+        int id PK
+        string name
+        string slug UK
+        string description
+        int parent_id FK
+    }
+
+    PRODUCT_CATEGORY {
+        int product_id FK
+        int category_id FK
+    }
+
+    PRODUCT_IMAGE {
+        int id PK
+        int product_id FK
+        string image_url
+        int display_order
+        bool is_primary
+    }
+
+    PRODUCT_VARIANT {
+        int id PK
+        int product_id FK
+        string sku UK
+        decimal price
+        bool is_active
+        datetime created_at
+    }
+
+
+    %% =========================
+    %% VARIANT SYSTEM
+    %% =========================
+
+    PRODUCT ||--o{ PRODUCT_ATTRIBUTE : defines
+
+    PRODUCT_ATTRIBUTE ||--o{ ATTRIBUTE_OPTION : contains
+
+    PRODUCT_VARIANT ||--o{ VARIANT_ATTRIBUTE_VALUE : uses
+    ATTRIBUTE_OPTION ||--o{ VARIANT_ATTRIBUTE_VALUE : selected_in
+
+    PRODUCT_ATTRIBUTE {
+        int id PK
+        int product_id FK
+        string name
+    }
+
+    ATTRIBUTE_OPTION {
+        int id PK
+        int product_attribute_id FK
+        string value
+    }
+
+    VARIANT_ATTRIBUTE_VALUE {
+        int product_variant_id FK
+        int attribute_option_id FK
+    }
+
+
+    %% =========================
+    %% INVENTORY
+    %% =========================
+
+    PRODUCT_VARIANT ||--|| INVENTORY : tracked_by
+
+    INVENTORY ||--o{ STOCK_MOVEMENT : records
+
+    INVENTORY {
+        int id PK
+        int product_variant_id FK
+        int available_quantity
+        int reserved_quantity
+        datetime updated_at
+    }
+
+    STOCK_MOVEMENT {
+        int id PK
+        int inventory_id FK
+        string movement_type
+        int quantity
+        string reason
+        datetime created_at
+    }
+
+
+    %% =========================
+    %% CART
+    %% =========================
+
+    CART ||--o{ CART_ITEM : contains
+    PRODUCT_VARIANT ||--o{ CART_ITEM : added_to
+
+    CART {
+        int id PK
+        int user_id FK
+        datetime created_at
+        datetime updated_at
+    }
+
+    CART_ITEM {
+        int id PK
+        int cart_id FK
+        int product_variant_id FK
+        int quantity
+    }
+
+
+    %% =========================
+    %% ORDERS
+    %% =========================
+
+    ORDER ||--o{ ORDER_ITEM : contains
+    PRODUCT_VARIANT ||--o{ ORDER_ITEM : purchased_as
+
+    ORDER ||--|| PAYMENT : paid_by
+
+    ORDER ||--o{ ORDER_STATUS_HISTORY : tracks
+
+    ORDER {
+        int id PK
+        int user_id FK
+        text shipping_address_snapshot
+        decimal total_amount
+        string status
+        datetime created_at
+        datetime updated_at
+    }
+
+    ORDER_ITEM {
+        int id PK
+        int order_id FK
+        int product_variant_id FK
+        string product_name_snapshot
+        decimal price_at_purchase
+        int quantity
+    }
+
+    PAYMENT {
+        int id PK
+        int order_id FK
+        string tx_ref UK
+        decimal amount
+        string status
+        datetime created_at
+    }
+
+    ORDER_STATUS_HISTORY {
+        int id PK
+        int order_id FK
+        string status
+        datetime created_at
+    }
+
+
+    %% =========================
+    %% REVIEWS
+    %% =========================
+
+    REVIEW {
+        int id PK
+        int user_id FK
+        int product_id FK
+        int rating
+        text comment
+        bool verified_purchase
+        datetime created_at
+    }
+
+
+    %% =========================
+    %% PROMOTIONS
+    %% =========================
+
+    PROMOTION ||--o{ PROMOTION_PRODUCT : applies_to
+    PRODUCT_VARIANT ||--o{ PROMOTION_PRODUCT : included_in
+
+    PROMOTION {
+        int id PK
+        string name
+        string promotion_type
+        decimal discount_value
+        datetime starts_at
+        datetime ends_at
+        int max_quantity
+        int sold_quantity
+        bool is_active
+    }
+
+    PROMOTION_PRODUCT {
+        int promotion_id FK
+        int product_variant_id FK
+    }
+
+    COUPON {
+        int id PK
+        string code UK
+        string discount_type
+        decimal discount_value
+        datetime expires_at
+        bool is_active
+    }
+
+
+    %% =========================
+    %% SEARCH & RECOMMENDATION
+    %% =========================
+
+    PRODUCT_VIEW {
+        int id PK
+        int user_id FK
+        int product_id FK
+        datetime viewed_at
+    }
+
+    USER_INTERACTION {
+        int id PK
+        int user_id FK
+        int product_id FK
+        string interaction_type
+        int weight
+        datetime created_at
+    }
+
+
+    %% =========================
+    %% AI CHAT
+    %% =========================
+
+    CHAT_SESSION ||--o{ CHAT_MESSAGE : contains
+
+    CHAT_SESSION {
+        int id PK
+        int user_id FK
+        datetime created_at
+    }
+
+    CHAT_MESSAGE {
+        int id PK
+        int chat_session_id FK
+        string role
+        text content
+        datetime created_at
+    }
+
